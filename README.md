@@ -147,7 +147,7 @@ Notes on ngrok:
 ## Setup Instructions
 
 1. Clone the Repository
-   git clone [https://github.com/yourusername/ava-ai-assistant.git](https://github.com/yourusername/ava-ai-assistant.git)
+   git clone [https://github.com/salonidembla/ava-ai-assistant.git](https://github.com/salonidembla/ava-ai-assistant.git)
    cd ava-ai-assistant
 
 2. Create a Virtual Environment
