@@ -108,12 +108,20 @@ class AvaCore:
             print("[Ava] Processing OCR click...")
             off("Processing OCR click...")
             try:
-                result = ocr_click("button")
+                # Extract the text to click after the word "click"
+                target = query.replace("click", "").strip()
+                if not target:
+                    off("Please specify what to click.")
+                    return "Please specify what to click."
+
+                print(f"[Ava] OCR will search for: '{target}'")
+                result = ocr_click(target)  # ✅ Now uses the user's actual target
                 off("OCR click completed.")
                 return result
             except Exception as e:
                 off("OCR failed.")
                 return f"OCR failed: {e}"
+
 
 
         # --- OBJECT DETECTION ---
@@ -122,7 +130,7 @@ class AvaCore:
             off("Opening camera for object detection...")
             capture_and_send_image()
             off("Camera stream active.")
-            return "Object detection started."
+            return "Object detection completed."
 
 
         # --- TASK MANAGEMENT ---
@@ -157,11 +165,45 @@ class AvaCore:
 
         # --- EMAIL ---
         elif "send email" in query or "send gmail" in query:
-            sender = "salonidembla2004@gmail.com"
-            app_pass = "<YOUR_APP_PASSWORD>"
-            recipient = "salonidembla57@gmail.com"
-            ok, msg = send_email_smtp(sender, app_pass, recipient, "Test from Ava", "Hello! Sent from Ava.")
-            return msg
+            try:
+                sender = "salonidembla2004@gmail.com"
+                app_pass = CONFIG.get("gmailpass", "")
+                recipient = "salonidembla57@gmail.com"  # You can later make this dynamic if needed
+
+                if not app_pass:
+                    off("Gmail password not found in config.")
+                    return "❌ Gmail app password missing in config.json."
+
+                # Step 1: Ask for subject
+                off("What should be the subject of the email?")
+                subject = Listen().strip()
+                if not subject:
+                    return "No subject received. Email cancelled."
+
+                off(f"You said, {subject}. Got it.")
+
+                # Step 2: Ask for message
+                off("What should I write in the email?")
+                body = Listen().strip()
+                if not body:
+                    return "No message received. Email cancelled."
+
+                off(f"Composing email to {recipient} with subject {subject}.")
+                print(f"[Email] From: {sender}\nTo: {recipient}\nSubject: {subject}\nBody: {body}")
+
+                # Step 3: Send email
+                ok, msg = send_email_smtp(sender, app_pass, recipient, subject, body)
+
+                if ok:
+                    off("Email sent successfully.")
+                else:
+                    off("Failed to send email.")
+                return msg
+
+            except Exception as e:
+                off("Something went wrong while sending the email.")
+                return f"Email sending failed: {e}"
+
 
         # --- WIKIPEDIA ---
         elif "wikipedia" in query:
