@@ -1,0 +1,61 @@
+# Byte-compiled / caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.pytest_cache/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# Editor files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# Secrets & config
+config/config.json
+*.pem
+*.key
+
+# Media / model outputs (do not commit large files)
+output_*.png
+*.ckpt
+*.safetensors
+models/
+*.pt
+*.pth
+
+# ngrok, ngrok auth token, run files
+ngrok*
+*.ngrok
+ngrok.log
+
+# macOS Spotlight
+.AppleDouble
+.LSOverride
+
+# PyInstaller
+*.spec
+
+# Windows
+*.db
+
+# Misc
+*.mp3
+data.mp3
