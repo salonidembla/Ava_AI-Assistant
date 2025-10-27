@@ -1,38 +1,35 @@
-import json
-import io
-import requests
-from PIL import ImageGrab
-import pyautogui as pag
-from time import sleep, time
-import traceback
+def ocr_click(search_string: str, double_click=False):
+    """
+    Capture the screen, send to OCR API, and click directly at the returned coordinates.
+    No confirmation checks — clicks whatever the OCR server detects.
+    """
+    import json, io, requests, traceback
+    from PIL import ImageGrab, ImageDraw
+    import pyautogui as pag
+    from time import sleep, time
+    import platform
 
-def load_ocr_url():
-    """Load OCR endpoint URL from config/config.json"""
+    # Enable DPI awareness (Windows)
+    if platform.system() == "Windows":
+        try:
+            import ctypes
+            try:
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)
+            except Exception:
+                ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+    # Load OCR URL
     try:
-        with open("config/config.json") as f:
+        with open("config/config.json", "r", encoding="utf-8") as f:
             config = json.load(f)
             url = config.get("OCR_Colab", "")
             if not url:
                 raise ValueError("OCR_Colab URL missing in config file.")
-            return url
     except Exception as e:
         print(f"[OCR] ❌ Config error: {e}")
         return None
-
-
-def ocr_click(search_string: str, double_click=False):
-    """
-    Capture the screen, send to OCR API, find button with `search_string`,
-    and click it automatically.
-
-    Args:
-        search_string (str): Text to locate on screen.
-        double_click (bool): Whether to double click instead of single click.
-    """
-    url = load_ocr_url()
-    if not url:
-        print("[OCR] ❌ No OCR URL configured in config.json")
-        return "No OCR URL configured."
 
     try:
         print(f"[OCR] 📸 Capturing screen for '{search_string}'...")
@@ -41,10 +38,7 @@ def ocr_click(search_string: str, double_click=False):
         screenshot.save(img_bytes, format="PNG")
         img_bytes.seek(0)
 
-        payload = {
-            "search_string": search_string,
-            "double_click": "on" if double_click else "off"
-        }
+        payload = {"search_string": search_string}
         files = {"image": img_bytes}
 
         print("[OCR] 🚀 Sending to remote OCR endpoint...")
@@ -52,34 +46,48 @@ def ocr_click(search_string: str, double_click=False):
 
         if response.status_code != 200:
             print(f"[OCR] ⚠️ HTTP {response.status_code}: {response.text}")
-            return f"HTTP Error {response.status_code}"
+            return
 
         result = response.json()
-        if "error" in result:
-            print(f"[OCR] ❌ API error: {result['error']}")
-            return result["error"]
+        print("[OCR] ✅ Server response:", result)
 
         point = result.get("point")
         if not point or len(point) < 2:
-            print("[OCR] ❌ No click coordinates returned.")
-            return "No coordinates found."
+            print("[OCR] ❌ No coordinates returned.")
+            return
 
-        x, y = point
-        print(f"[OCR] ✅ Found '{search_string}' at {x}, {y}")
+        # Get coordinates
+        x, y = float(point[0]), float(point[1])
 
-        # Safety pause to avoid accidental misclicks
-        sleep(0.5)
-        pag.moveTo(x, y, duration=0.3)
+        # Adjust for scaling if needed
+        screen_w, screen_h = pag.size()
+        img_w, img_h = screenshot.size
+        if (img_w != screen_w) or (img_h != screen_h):
+            scale_x = screen_w / img_w
+            scale_y = screen_h / img_h
+            x, y = x * scale_x, y * scale_y
 
+        # Optional debug image
+        try:
+            dbg = screenshot.copy()
+            draw = ImageDraw.Draw(dbg)
+            r = 10
+            draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=4)
+            dbg.save("ocr_debug_image.png")
+            print("[OCR] 🖼️ Saved debug image to ocr_debug_image.png")
+        except Exception:
+            pass
+
+        # Click immediately
+        sleep(0.2)
+        pag.moveTo(x, y, duration=0.2)
         if double_click:
             pag.click(x, y, clicks=2, interval=0.25)
         else:
             pag.click(x, y)
 
         print(f"[OCR] 🖱️ Clicked successfully at ({x}, {y})")
-        return f"Clicked '{search_string}' successfully."
 
     except Exception as e:
-        print("[OCR] ❌ Exception during OCR click:", e)
+        print("[OCR] ❌ Error:", e)
         traceback.print_exc()
-        return f"OCR click failed: {e}"
